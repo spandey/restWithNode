@@ -1,0 +1,19 @@
+{
+  "name": "restwithnode",
+  "version": "1.0.0",
+  "description": "Dummy API",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/spandey/restWithNode.git"
+  },
+  "author": "Shambhu Nath Pandey",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/spandey/restWithNode/issues"
+  },
+  "homepage": "https://github.com/spandey/restWithNode#readme"
+}
