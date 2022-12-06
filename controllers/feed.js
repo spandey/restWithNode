@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { validationResult } = require('express-validator');
 const Post = require('../model/post');
+const User = require('../model/user');
 // const { post } = require('../routes/feed');
 
 module.exports = {
@@ -32,28 +33,7 @@ module.exports = {
               err.statusCode = 500;
             }
             next(err);
-          });        // Post
-        // .find()
-        // .then(posts =>{
-        //     if(!posts){
-        //         const error = new Error('Could not find post.');
-        //         error.statusCode = 404;
-        //         throw error;
-              
-        //     }
-        //     res.status(200).json({
-        //         posts:   posts
-        //     })
-        // })
-        // .catch(
-        //     err => {
-        //         if (!err.statusCode) {
-        //           err.statusCode = 500;
-        //         }
-        //         next(err);
-        //       }
-        // );
-
+          });  
         
     },
     
@@ -74,20 +54,34 @@ module.exports = {
 
             const title = req.body.title;
             const content = req.body.content;
+            let creator;
             const postData = new Post(
                 {
                     title: title,
                     content: content,
                     imageUrl: imageUrl,
-                    creator: { name: 'Shambhu' } 
+                    creator: req.userId
                 }
             )
             postData
                 .save()
-                .then((result)=> res.status(201).json({
+                .then((data) => {
+                    return User.findById(req.userId)
+                })
+                .then((userdata) => {
+                    creator = userdata
+                    userdata.posts.push(postData);
+                    return userdata.save()
+
+                })
+                .then((result)=> {
+                    console.log(result);
+                    res.status(201).json({
                     message: 'Post created successfully!',
-                    post: result
-                  }))
+                    post: postData,
+                    creator: {_id:creator._id,name:creator.name}
+                    })
+                })
                 .catch(err=>{                
                         if (!err.statusCode) {
                           err.statusCode = 500;
@@ -136,6 +130,7 @@ module.exports = {
         if (req.file) {
             imageUrl = req.file.path;
         }
+        
         if (!imageUrl) {
             const error = new Error('No file picked.');
             error.statusCode = 422;
@@ -149,9 +144,15 @@ module.exports = {
             error.statusCode = 404;
             throw error;
         }
+        if(post.creator.toString()!== req.userId){
+            const error = new Error("Not Authorized");
+            error.statusCode = 403;
+            throw error;
+        }
         if (imageUrl !== post.imageUrl) {
             clearImage(post.imageUrl);
         }
+       
         post.title = title;
         post.imageUrl = imageUrl;
         post.content = content;
@@ -179,6 +180,11 @@ module.exports = {
                         error.statusCode = 404
                         throw error;
                     }
+                    if(data.creator.toString()!== req.userId){
+                        const error = new Error("Not Authorized");
+                        error.statusCode = 403;
+                        throw error;
+                    }
                     let imageUrl = data.imageUrl;
                     if(imageUrl) {
                         clearImage(imageUrl);
@@ -187,6 +193,11 @@ module.exports = {
                     
                 }
             )
+            .then(result => {return User.findById(req.userId)})
+            .then(userData => {
+                userData.posts.pull(id)
+                return userData.save();
+            })
             .then(result=>{
                
                 res.status(200).json({message: 'Post Deleted!', post: result})
